@@ -40,6 +40,8 @@ public class YangValidator {
 		if (buffer == null)
 			return true;
 
+        value = value.replace("\"", "");
+
 		if (value.contains(":")) {
 			String ss[] = value.split(":");
 			for (Statement st : buffer) {
