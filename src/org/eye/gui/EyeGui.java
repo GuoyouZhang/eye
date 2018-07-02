@@ -306,11 +306,12 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 		if (this.currentGuiComponent != textYang) {
 			textYang.setText(FileUtil.readFile(fname));
 			this.currentFileInTextArea = fname;
-			this.textChanged = false;
 		}
+		this.textChanged = false;
+
 		this.file2pos.put(fname, posMap);
 
-		this.textLog.append("Tree view refreshed\n");
+		// this.textLog.append("Tree view refreshed\n");
 	}
 
 	/**
