@@ -38,9 +38,9 @@ public class TextLocator {
 							break;
 						}
 					}
-				} else {
-					System.out.println("Unexpected comment format, char:" + i);
-					return -1;
+				} else { //something like abc/def
+					//System.out.println("not a comment, char:" + i);
+					//return -1;
 				}
 			} else if (c == '\'' || c == '\"') {
 				// skip quotation

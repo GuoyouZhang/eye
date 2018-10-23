@@ -41,9 +41,9 @@ public class YangParser {
 		return (char) i;
 	}
 
-	private void skipComment(BufferedReader reader, StringBuilder sb) throws Exception {
-		char c = readChar(reader);
-		sb.append(c);
+	private void skipComment(BufferedReader reader, StringBuilder sb, char c) throws Exception {
+		//char c = readChar(reader);
+		//sb.append(c);
 		if (c == '/') {
 			String aline = reader.readLine();
 			sb.append(aline);
@@ -87,17 +87,22 @@ public class YangParser {
 			}
 
 			if (c == '/') {
+				char next = readChar(reader);
 				int startPos = sb.length();
 				sb.append(c);
-				Statement st = new Statement();
-				st.setKeyword(YangKeyword.YK_COMMENT);
-				st.setLine(line);
-				skipComment(reader, sb);
-				st.setText(sb.toString());
-				st.setValue(sb.toString());
-				sb.delete(startPos, sb.length());
-				st.setFile(parent.getFile());
-				parent.children.add(st);
+				sb.append(next);
+				
+				if (next == '/' || next == '*') {
+					Statement st = new Statement();
+					st.setKeyword(YangKeyword.YK_COMMENT);
+					st.setLine(line);
+					skipComment(reader, sb, next);
+					st.setText(sb.toString());
+					st.setValue(sb.toString());
+					sb.delete(startPos, sb.length());
+					st.setFile(parent.getFile());
+					parent.children.add(st);
+				}
 				continue;
 			} else if (c == '\'' || c == '\"') {
 				sb.append(c);
