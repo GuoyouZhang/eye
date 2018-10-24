@@ -434,6 +434,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 			e.printStackTrace();
 		}
 	}
+
 	// mouse events
 	public void mouseClicked(MouseEvent e) {
 	}
@@ -466,9 +467,11 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 			locateYangText(ytn);
 
 			if (e.getButton() == MouseEvent.BUTTON3) { // show menu
-				if (ytn.getKeyword().equals(YangKeyword.YK_CONTAINER)
-						&& currentYangTreeNode.getParent().getParent() == this.treeRootYang) {
-					menuPopup.add(menuItemExtendTree);
+				if (currentYangTreeNode.getParent().getParent() == this.treeRootYang) {
+					if (ytn.getKeyword().equals(YangKeyword.YK_CONTAINER)
+							|| ytn.getKeyword().equals(YangKeyword.YK_LIST)) {
+						menuPopup.add(menuItemExtendTree);
+					}
 				}
 				if (ytn.getKeyword().equals(YangKeyword.YK_MODULE)
 						|| ytn.getKeyword().equals(YangKeyword.YK_SUBMODULE)) {

@@ -46,8 +46,17 @@ public class TreeBuilder {
 			Statement stmt) {
 
 		if (!stmt.getKeyword().equals(YangKeyword.YK_COMMENT) && stmt.getKeyword().equals(YangKeyword.YK_USES)) {
-			Statement group = YangRepo.findStatementByKVP(YangKeyword.YK_GROUPING, stmt.getValue(),
-					stmt.getPrefix());
+			String ss[] = stmt.getValue().split(":");
+			String prefix = stmt.getPrefix();
+			String gname = stmt.getValue();
+			
+			if(ss.length==2)
+			{
+				prefix = ss[0];
+				gname = ss[1];
+			}
+			Statement group = YangRepo.findStatementByKVP(YangKeyword.YK_GROUPING, gname,
+					prefix);
 			if (group == null) {
 				System.out.println("cannot find out grouping:" + stmt.getValue());
 				return;
