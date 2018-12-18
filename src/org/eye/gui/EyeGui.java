@@ -83,6 +83,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 	private JMenuItem menuItemExtendTree = new JMenuItem("Extend Tree");
 	private JMenuItem menuItemDelete = new JMenuItem("Delete");
 	private JMenuItem menuItemUnloadYang = new JMenuItem("Unload YANG module");
+	private JMenuItem menuItemGenXpath = new JMenuItem("Generate XPath");
 
 	// tree
 	private JTree treeYang = new JTree();
@@ -130,6 +131,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 		menus.add(new MenuStruct(null, menuItemDelete, "AC_DELETE_YANG", "/images/delete.png"));
 		menus.add(new MenuStruct(null, menuItemUnloadYang, "AC_UNLOAD_YANG", "/images/delete.png"));
 		menus.add(new MenuStruct(null, menuItemExtendTree, "AC_EXTEND_TREE", "/images/extend.png"));
+		menus.add(new MenuStruct(null, menuItemGenXpath, "AC_GEN_XPATH", "/images/extend.png"));
 
 		for (MenuStruct ms : menus) {
 			if (ms.menu != null)
@@ -314,6 +316,49 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 		// this.textLog.append("Tree view refreshed\n");
 	}
 
+	private void printXpath() {
+		recursivePrintXpath(this.currentYangTreeNode);
+	}
+
+	private void recursivePrintXpath(DefaultMutableTreeNode parent) {
+		String xpath = "";
+		DefaultMutableTreeNode tmp = parent;
+		while (true) {
+			Statement ytn = (Statement) tmp.getUserObject();
+			if ( !(ytn.getKeyword().equals(YangKeyword.YK_LEAF) 
+					|| ytn.getKeyword().equals(YangKeyword.YK_LEAF_LIST)
+					|| ytn.getKeyword().equals(YangKeyword.YK_ACTION)
+					|| ytn.getKeyword().equals(YangKeyword.YK_CONTAINER)
+					|| ytn.getKeyword().equals(YangKeyword.YK_LIST)
+					|| ytn.getKeyword().equals(YangKeyword.YK_MODULE)
+					|| ytn.getKeyword().equals(YangKeyword.YK_SUBMODULE)
+					|| ytn.getKeyword().equals(YangKeyword.YK_AUGMENT)) ){
+				return;
+			}
+			if (ytn.getKeyword().equals(YangKeyword.YK_MODULE) || ytn.getKeyword().equals(YangKeyword.YK_SUBMODULE)) {
+				xpath = xpath.replaceFirst("/", ":");
+				xpath = "/" + ytn.getValue() + xpath;
+				this.textLog.append(xpath + "\n");
+				break;
+			}
+			if (ytn.getKeyword().equals(YangKeyword.YK_AUGMENT)){
+				String s = ytn.getValue().replaceAll("\"", ""); //augment path
+				tmp = (DefaultMutableTreeNode) tmp.getParent();
+				ytn = (Statement) tmp.getUserObject();
+				s = s + "/"+ytn.getValue()+":"; //augment path + this module name
+				xpath = s + xpath.replaceFirst("/", ":");;
+				this.textLog.append(xpath + "\n");
+				break;
+			}
+			xpath = "/" + ytn.getValue() + xpath;
+			tmp = (DefaultMutableTreeNode) tmp.getParent();
+		}
+		
+		for (int i=0;i<parent.getChildCount() ;i++) {
+			recursivePrintXpath((DefaultMutableTreeNode)parent.getChildAt(i));
+		}
+	}
+
 	/**
 	 * Invoked when an action occurs.
 	 */
@@ -358,6 +403,8 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 
 			treeYang.addSelectionPath(new TreePath(n.getPath()));
 			treeYang.scrollPathToVisible(treeYang.getSelectionPath());
+		} else if ("AC_GEN_XPATH".equals(command)) {
+			printXpath();
 		} else if ("AC_GOTO_LINE".equals(command)) {
 			String line = JOptionPane.showInputDialog("Input line number");
 			if (line == null || line.equals(""))
@@ -375,6 +422,8 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 		} else if ("AC_EXTEND_TREE".equals(command)) {
 			this.cleanTree(this.treeExtended, this.treeRootExtended);
 			Statement stmt = (Statement) currentYangTreeNode.getUserObject();
+			DefaultMutableTreeNode module = (DefaultMutableTreeNode)currentYangTreeNode.getParent();
+			this.treeRootExtended.setUserObject(module.getUserObject());
 			TreeBuilder.loadExtendedTree(this.treeRootExtended, stmt);
 			this.reloadTreeNode(this.treeExtended, this.treeRootExtended);
 			this.expandTreeLevel(this.treeExtended, this.treeRootExtended, 1);
@@ -490,6 +539,13 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 				if (m.getItemCount() > 0) {
 					menuPopup.add(m);
 				}
+				if (ytn.getKeyword().equals(YangKeyword.YK_LEAF) || ytn.getKeyword().equals(YangKeyword.YK_LEAF_LIST)
+						|| ytn.getKeyword().equals(YangKeyword.YK_ACTION)
+						|| ytn.getKeyword().equals(YangKeyword.YK_CONTAINER)
+						|| ytn.getKeyword().equals(YangKeyword.YK_LIST)
+						|| ytn.getKeyword().equals(YangKeyword.YK_AUGMENT)) {
+					menuPopup.add(menuItemGenXpath);
+				}
 				menuPopup.pack();
 				menuPopup.show(treeYang, e.getX(), e.getY());
 			}
@@ -501,6 +557,19 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 			currentYangTreeNode = (DefaultMutableTreeNode) path.getPathComponent(path.getPathCount() - 1);
 			Statement ytn = (Statement) currentYangTreeNode.getUserObject();
 			locateYangText(ytn);
+			
+			if (e.getButton() == MouseEvent.BUTTON3) { // show menu
+				if (ytn.getKeyword().equals(YangKeyword.YK_LEAF) || ytn.getKeyword().equals(YangKeyword.YK_LEAF_LIST)
+						|| ytn.getKeyword().equals(YangKeyword.YK_ACTION)
+						|| ytn.getKeyword().equals(YangKeyword.YK_CONTAINER)
+						|| ytn.getKeyword().equals(YangKeyword.YK_LIST)
+						|| ytn.getKeyword().equals(YangKeyword.YK_AUGMENT)) {
+					menuPopup.add(menuItemGenXpath);
+				}
+			}
+			menuPopup.pack();
+			menuPopup.show(treeExtended, e.getX(), e.getY());
+
 		} else if (e.getComponent() == textYang) {
 			if (e.getButton() == MouseEvent.BUTTON3) { // show menu
 				menuPopup.add(menuItemGotoTree);
