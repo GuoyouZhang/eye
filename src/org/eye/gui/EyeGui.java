@@ -105,6 +105,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 
 	private AddMenuHandler addMenuHandler = null;
 	private MoveMenuHandler moveMenuHandler = null;
+	private AugmentMenuHandler augMenuHandler = null;
 
 	public EyeGui() {
 		// setup main window
@@ -198,7 +199,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 
 		addMenuHandler = new AddMenuHandler(this.treeYang);
 		moveMenuHandler = new MoveMenuHandler(this.treeYang);
-
+		augMenuHandler = new AugmentMenuHandler(this.treeYang, this);
 		WindowUtil.setWindowIcon(this, null);
 		WindowUtil.setWindowPos(this, true);
 		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -338,6 +339,8 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 			if (ytn.getKeyword().equals(YangKeyword.YK_MODULE) || ytn.getKeyword().equals(YangKeyword.YK_SUBMODULE)) {
 				xpath = xpath.replaceFirst("/", ":");
 				xpath = "/" + ytn.getValue() + xpath;
+				xpath = xpath.replaceAll("\\+", "");
+				xpath = xpath.replaceAll("\\s", "");
 				this.textLog.append(xpath + "\n");
 				break;
 			}
@@ -346,7 +349,9 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 				tmp = (DefaultMutableTreeNode) tmp.getParent();
 				ytn = (Statement) tmp.getUserObject();
 				s = s + "/"+ytn.getValue()+":"; //augment path + this module name
-				xpath = s + xpath.replaceFirst("/", ":");;
+				xpath = s + xpath.replaceFirst("/", ":");
+				xpath = xpath.replaceAll("\\+", "");
+				xpath = xpath.replaceAll("\\s", "");
 				this.textLog.append(xpath + "\n");
 				break;
 			}
@@ -403,6 +408,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 
 			treeYang.addSelectionPath(new TreePath(n.getPath()));
 			treeYang.scrollPathToVisible(treeYang.getSelectionPath());
+			tabTop.setSelectedIndex(0);
 		} else if ("AC_GEN_XPATH".equals(command)) {
 			printXpath();
 		} else if ("AC_GOTO_LINE".equals(command)) {
@@ -463,12 +469,20 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 			YangRepo.delete(st);
 			textYang.setText("");
 			textChanged = false;
-			this.reloadTreeNode(this.treeYang, treeRootYang);
+			this.reloadTreeNode(this.treeYang, treeRootYang);	
 		} else if ("AC_ABOUT".equals(command)) {
 			String s = "\t Easy YANG Editor 1.0\n Make your life easier:) \n\n";
 			ImageIcon icon = new ImageIcon(ClassLoader.class.getResource("/images/eyelogo.png"));
 			JOptionPane.showMessageDialog(this, s, "About Easy YANG Editor", JOptionPane.INFORMATION_MESSAGE, icon);
 		}
+	}
+	
+	public void extendAugment(DefaultMutableTreeNode top) {
+		this.cleanTree(this.treeExtended, this.treeRootExtended);
+		treeRootExtended.add(top);
+		this.reloadTreeNode(this.treeExtended, this.treeRootExtended);
+		this.expandTreeLevel(this.treeExtended, this.treeRootExtended, 1);
+		tabTop.setSelectedIndex(1);
 	}
 
 	private void highLight(int start, int end) {
@@ -545,6 +559,13 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 						|| ytn.getKeyword().equals(YangKeyword.YK_LIST)
 						|| ytn.getKeyword().equals(YangKeyword.YK_AUGMENT)) {
 					menuPopup.add(menuItemGenXpath);
+				}
+				if (ytn.getKeyword().equals(YangKeyword.YK_CONTAINER) || ytn.getKeyword().equals(YangKeyword.YK_LIST)) {
+					//menuPopup.add(menuItemExtendAugment);
+					m = augMenuHandler.findAugmentMenus(currentYangTreeNode);
+					if (m.getItemCount() > 0) {
+						menuPopup.add(m);
+					}
 				}
 				menuPopup.pack();
 				menuPopup.show(treeYang, e.getX(), e.getY());
