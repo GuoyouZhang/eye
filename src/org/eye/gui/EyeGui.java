@@ -41,6 +41,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import org.eye.parser.FileUtil;
+import org.eye.parser.NamespaceUtil;
 import org.eye.parser.Statement;
 import org.eye.parser.YangGenerator;
 import org.eye.parser.YangKeyword;
@@ -68,6 +69,8 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 	// system menu
 	private JMenuItem menuItemLoadYang = new JMenuItem("Load YANG files");
 	private JMenuItem menuItemCloseYang = new JMenuItem("Unload All YANG files");
+	private JMenuItem menuItemGenNs = new JMenuItem("Generate Namespace for xml");
+
 	private JMenuItem menuItemExit = new JMenuItem("Exit");
 
 	// find menu
@@ -119,8 +122,9 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 		menus.add(new MenuStruct(mu_system, menuItemCloseYang, "AC_CLOSE_YANG", "/images/delete.png"));
 		menus.add(new MenuStruct(mu_system, menuItemExit, "AC_EXIT", "/images/exit.png"));
 
-		JMenu mu_find = new JMenu("Find");
-		menus.add(new MenuStruct(mu_find, menuItemFindKey, "AC_FIND_KEY", "/images/find.png"));
+		JMenu mu_edit = new JMenu("Edit");
+		menus.add(new MenuStruct(mu_edit, menuItemGenNs, "AC_GEN_NS", "/images/eye.png"));
+		menus.add(new MenuStruct(mu_edit, menuItemFindKey, "AC_FIND_KEY", "/images/find.png"));
 
 		JMenu mu_help = new JMenu("Help");
 		menus.add(new MenuStruct(mu_help, menuItemAbout, "AC_ABOUT", "/images/help.png"));
@@ -145,7 +149,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 
 		JMenuBar menuBar = new JMenuBar();
 		menuBar.add(mu_system);
-		menuBar.add(mu_find);
+		menuBar.add(mu_edit);
 		menuBar.add(mu_help);
 
 		this.setJMenuBar(menuBar);
@@ -397,6 +401,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 					}
 				}
 				this.textChanged = false;
+				NamespaceUtil.init();
 			}
 		} else if ("AC_GOTO_TREE".equals(command)) {
 			int l = this.getYangTextLine();
@@ -441,6 +446,25 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 			textChanged = false;
 		} else if ("AC_FIND_KEY".equals(command)) {
 			this.findStatement();
+		} else if ("AC_GEN_NS".equals(command)) {
+			JFileChooser dlg = new JFileChooser(".");
+			dlg.setName("Select a XML File");
+			String postfix[] = { ".xml" };
+			dlg.setFileFilter(new FileFilterImpl(postfix));
+			if (dlg.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				File f = dlg.getSelectedFile();
+				if( f!= null) {
+					String xml = FileUtil.readFile(f.getAbsolutePath());
+					textLog.append("\n-------add namespace for "+f.getName()+"-------\n");					
+					textLog.append(xml);
+					textLog.append("\n-------It looks like below with namespace-------\n");					
+					try {
+						textLog.append(NamespaceUtil.addNsToXml(xml));
+					} catch (Exception e1) {
+						textLog.append(e1.getMessage());
+					}
+				}
+			}
 		} else if ("AC_CLEAN_LOG".equals(command)) {
 			this.textLog.setText("");
 		} else if ("AC_DELETE_YANG".equals(command)) {

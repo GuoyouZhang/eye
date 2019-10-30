@@ -48,7 +48,7 @@ public class NamespaceUtil {
 	static Map<String, ExtendedNode> extendedTree = new HashMap<String, ExtendedNode>();
 	static Map<String, PrefixNode> prefix2ns = new HashMap<String, PrefixNode>();
 
-	public static void init(String yangFileFolder) {
+	public static void loadYangFile(String yangFileFolder) {
 		File dir = new File(yangFileFolder);
 		if (!dir.isDirectory()) {
 			System.out.println("Wrong yang file path:" + yangFileFolder);
@@ -63,6 +63,13 @@ public class NamespaceUtil {
 				}
 			}
 		}
+	}
+	
+	public static void init() {
+		topStatements.clear();
+		extendedTree.clear();
+		prefix2ns.clear();
+		
 		for (Statement module : YangRepo.findStatementByK(YangKeyword.YK_MODULE)) {
 			for (Statement sub : module.children) {
 				if (sub.getKeyword().equals(YangKeyword.YK_CONTAINER) || sub.getKeyword().equals(YangKeyword.YK_LEAF)
@@ -374,8 +381,9 @@ public class NamespaceUtil {
 	}
 
 	public static void main(String[] args) {
-		NamespaceUtil.init("yang file folder");
-
+		
+		NamespaceUtil.loadYangFile("yang file folder");
+		NamespaceUtil.init();
 		//ExtendedNode n = NamespaceUtil.getExtendTree("interfaces");
 		//ExtendedNode n = NamespaceUtil.getExtendTree("hardware");
 		//NamespaceUtil.printTree(n, 0);
