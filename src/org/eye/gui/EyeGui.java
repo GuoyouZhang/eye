@@ -459,7 +459,7 @@ public class EyeGui extends JFrame implements ActionListener, MouseListener, Doc
 					textLog.append(xml);
 					textLog.append("\n-------It looks like below with namespace-------\n");					
 					try {
-						textLog.append(NamespaceUtil.addNsToXml(xml));
+						textLog.append(NamespaceUtil.getXmlTextWithNs(xml));
 					} catch (Exception e1) {
 						textLog.append(e1.getMessage());
 					}

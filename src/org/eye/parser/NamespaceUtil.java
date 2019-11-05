@@ -64,12 +64,12 @@ public class NamespaceUtil {
 			}
 		}
 	}
-	
+
 	public static void init() {
 		topStatements.clear();
 		extendedTree.clear();
 		prefix2ns.clear();
-		
+
 		for (Statement module : YangRepo.findStatementByK(YangKeyword.YK_MODULE)) {
 			for (Statement sub : module.children) {
 				if (sub.getKeyword().equals(YangKeyword.YK_CONTAINER) || sub.getKeyword().equals(YangKeyword.YK_LEAF)
@@ -179,33 +179,35 @@ public class NamespaceUtil {
 		return null;
 	}
 
-	static void skipChoice(ExtendedNode n) {
+	private static void skipChoiceAndInput(ExtendedNode n) {
 		List<ExtendedNode> tobeDeleted = new ArrayList<ExtendedNode>();
 		for (ExtendedNode sub : n.children) {
-			if (sub.current.getKeyword().equals(YangKeyword.YK_CHOICE)) {
+			if (sub.current.getKeyword().equals(YangKeyword.YK_CHOICE)
+					|| sub.current.getKeyword().equals(YangKeyword.YK_INPUT)
+					|| sub.current.getKeyword().equals(YangKeyword.YK_OUTPUT)) {
 				tobeDeleted.add(sub);
 			}
 		}
-		for (ExtendedNode choiceItem : tobeDeleted) {
-			n.children.remove(choiceItem);
-			for (ExtendedNode childOfChoice : choiceItem.children) {
-				if (childOfChoice.current.getKeyword().equals(YangKeyword.YK_CASE)) {
-					for (ExtendedNode childOfCase : childOfChoice.children) {
+		for (ExtendedNode skipItem : tobeDeleted) {
+			n.children.remove(skipItem);
+			for (ExtendedNode childOfSkipItem : skipItem.children) {
+				if (childOfSkipItem.current.getKeyword().equals(YangKeyword.YK_CASE)) {
+					for (ExtendedNode childOfCase : childOfSkipItem.children) {
 						childOfCase.parent = n;
 						n.children.add(childOfCase);
 					}
 				} else {
-					childOfChoice.parent = n;
-					n.children.add(childOfChoice);
+					childOfSkipItem.parent = n;
+					n.children.add(childOfSkipItem);
 				}
 			}
 		}
 		for (ExtendedNode sub : n.children) {
-			skipChoice(sub);
+			skipChoiceAndInput(sub);
 		}
 	}
 
-	public static ExtendedNode getExtendTree(String name) {
+	private static ExtendedNode getExtendTree(String name) {
 		if (extendedTree.get(name) != null)
 			return extendedTree.get(name);
 
@@ -242,7 +244,7 @@ public class NamespaceUtil {
 			}
 		}
 		// now skip choise and case since it will not show up in runtime xml
-		skipChoice(parent);
+		skipChoiceAndInput(parent);
 		extendedTree.put(name, parent);
 		return parent;
 	}
@@ -354,7 +356,26 @@ public class NamespaceUtil {
 		}
 	}
 
-	public static String addNsToXml(String input) throws Exception {
+	/*
+	 * return the application data only
+	 */
+	public static String getXmlTextWithNs(String input) throws Exception {
+		Element root = getXmlTreeWithNs(input);
+		TransformerFactory transFactory = TransformerFactory.newInstance();
+		Transformer transformer = transFactory.newTransformer();
+		StringWriter buffer = new StringWriter();
+		transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+		transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+		transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+		transformer.transform(new DOMSource(root), new StreamResult(buffer));
+		return buffer.toString().replace("<root>", "").replaceAll("</root>", "");
+	}
+
+	/*
+	 * the return value is a XML tree root, the application data are the children of
+	 * the root
+	 */
+	public static Element getXmlTreeWithNs(String input) throws Exception {
 
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder = factory.newDocumentBuilder();
@@ -370,34 +391,40 @@ public class NamespaceUtil {
 			}
 		}
 
-		TransformerFactory transFactory = TransformerFactory.newInstance();
-		Transformer transformer = transFactory.newTransformer();
-		StringWriter buffer = new StringWriter();
-		transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-		transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-		transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-		transformer.transform(new DOMSource(doc.getDocumentElement()), new StreamResult(buffer));
-		return buffer.toString().replace("<root>", "").replaceAll("</root>", "");
+		return doc.getDocumentElement();
 	}
 
 	public static void main(String[] args) {
-		
-		NamespaceUtil.loadYangFile("yang file folder");
-		NamespaceUtil.init();
-		//ExtendedNode n = NamespaceUtil.getExtendTree("interfaces");
-		//ExtendedNode n = NamespaceUtil.getExtendTree("hardware");
-		//NamespaceUtil.printTree(n, 0);
+		String yangFile = null;
+		String xmlFile = null;
+		String outFile = null;
 
-		StringBuilder sb = new StringBuilder();
-		
-		sb.append("<interfaces>");
-		sb.append("<interface>");
-		sb.append("</interface>");
-		sb.append("</interfaces>");
+		for (int i = 0; i < args.length; i++) {
+			if (args[i].equals("-y")) {
+				yangFile = args[++i];
+			} else if (args[i].equals("-x")) {
+				xmlFile = args[++i];
+			} else if (args[i].equals("-o")) {
+				outFile = args[++i];
+			}
+		}
+
+		if (yangFile == null || xmlFile == null) {
+			System.out.println("Usage: -y [yang file folder] -x [xml file path] [-o <output file path>]");
+			System.exit(1);
+		}
+
+		NamespaceUtil.loadYangFile(yangFile);
+		NamespaceUtil.init();
+		String input = FileUtil.readFile(xmlFile);
 
 		try {
-			System.out.println(sb.toString());
-			System.out.println(addNsToXml(sb.toString()));
+			System.out.println(input);
+			String output = NamespaceUtil.getXmlTextWithNs(input);
+			if (outFile != null)
+				FileUtil.writeFile(outFile, output);
+			else
+				System.out.println(output);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
