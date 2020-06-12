@@ -330,15 +330,18 @@ public class NamespaceUtil {
 				}
 				if (isIdentifyref(node.current)) {
 					String value = ele.getTextContent();
-					Statement id = YangRepo.findStatementByKV(YangKeyword.YK_IDENTITY, value);
-					if (id == null) {
-						System.out.println("fail to find ns for " + value);
-					}
-					if (!id.getPrefix().equals(node.prefix)) {
-						PrefixNode pre = prefix2ns.get(id.getPrefix());
-						String trim = id.getPrefix().replaceAll("\"", "");
-						ele.setAttribute("xmlns:" + trim, pre.ns);
-						ele.setTextContent(trim + ":" + value);
+					//for netconf subtree filter, may have attribute without value
+					if (!value.equals("")) {
+						Statement id = YangRepo.findStatementByKV(YangKeyword.YK_IDENTITY, value);
+						if (id == null) {
+							System.out.println("fail to find ns for " + value);
+						}
+						if (!id.getPrefix().equals(node.prefix)) {
+							PrefixNode pre = prefix2ns.get(id.getPrefix());
+							String trim = id.getPrefix().replaceAll("\"", "");
+							ele.setAttribute("xmlns:" + trim, pre.ns);
+							ele.setTextContent(trim + ":" + value);
+						}
 					}
 				}
 				next = node;
