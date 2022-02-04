@@ -43,15 +43,27 @@ class PrefixNode {
 }
 
 public class NamespaceUtil {
-
+	public interface LogInterface {
+		void debug(String info);
+	}
 	static Map<String, Statement> topStatements = new HashMap<String, Statement>();
 	static Map<String, ExtendedNode> extendedTree = new HashMap<String, ExtendedNode>();
 	static Map<String, PrefixNode> prefix2ns = new HashMap<String, PrefixNode>();
-
+	static LogInterface log = new LogInterface() {
+		@Override
+		public void debug(String info) {
+			log.debug(info);
+		}
+	};
+	
+	public static void setLogger(LogInterface logger) {
+		log = logger;
+	}
+	
 	public static void loadYangFile(String yangFileFolder) {
 		File dir = new File(yangFileFolder);
 		if (!dir.isDirectory()) {
-			System.out.println("Wrong yang file path:" + yangFileFolder);
+			log.debug("Wrong yang file path:" + yangFileFolder);
 			return;
 		}
 		// load all yang file and fill topStatements
@@ -59,7 +71,9 @@ public class NamespaceUtil {
 			if (file.getName().endsWith(".yang")) {
 				List<String> err = YangParser.go(file.getAbsolutePath());
 				if (err.size() > 0) {
-					System.out.println(err);
+					log.debug(err.toString());
+				}else {
+					log.debug(file+" was loaded by NamespaceUtil");
 				}
 			}
 		}
@@ -74,13 +88,13 @@ public class NamespaceUtil {
 			for (Statement sub : module.children) {
 				if (sub.getKeyword().equals(YangKeyword.YK_CONTAINER) || sub.getKeyword().equals(YangKeyword.YK_LEAF)
 						|| sub.getKeyword().equals(YangKeyword.YK_LEAF_LIST)) {
-					// System.out.println(sub.getValue());
+					// log.debug(sub.getValue());
 					if (topStatements.get(sub.getValue()) == null) {
 						topStatements.put(sub.getValue(), sub);
-						// System.out.println("add top level node " + sub.getValue());
+						// log.debug("add top level node " + sub.getValue());
 					} else {
 						Statement s = topStatements.get(sub.getValue());
-						System.out.println("Duplicated top level node " + sub.getValue() + " defined in both "
+						log.debug("Duplicated top level node " + sub.getValue() + " defined in both "
 								+ sub.getFile() + " and " + s.getFile());
 					}
 				}
@@ -109,7 +123,7 @@ public class NamespaceUtil {
 				prefix2ns.put(pn.prefix, pn);
 				module2Prefix.put(pn.module, pn);
 			} else {
-				System.out.println("Duplicated prefix " + pn.prefix + " in both " + exist.file + " and " + pn.file);
+				log.debug("Duplicated prefix " + pn.prefix + " in both " + exist.file + " and " + pn.file);
 			}
 		}
 		// the import->prefix could be different from the original defined in
@@ -140,13 +154,13 @@ public class NamespaceUtil {
 	}
 
 	private static ExtendedNode findAugmentedNode(String xpath, ExtendedNode top) {
-		// System.out.println(xpath);
+		// log.debug(xpath);
 		String[] ss = xpath.split("/");
 		ExtendedNode n = top;
 		for (int i = 0; i < ss.length; i++) {
 			if (ss[i].equals(""))
 				continue;
-			// System.out.println(ss[i]);
+			// log.debug(ss[i]);
 			String[] prefixAndName = ss[i].split(":");
 			String name = prefixAndName[prefixAndName.length - 1];
 			boolean found = false;
@@ -240,7 +254,7 @@ public class NamespaceUtil {
 					loadExtendedTree(augmented, sub, null);
 				}
 			} else {
-				System.out.println("cannot find out augmented node for " + xpath);
+				log.debug("cannot find out augmented node for " + xpath);
 			}
 		}
 		// now skip choise and case since it will not show up in runtime xml
@@ -250,14 +264,14 @@ public class NamespaceUtil {
 	}
 
 	private static void loadExtendedTree(ExtendedNode parent, Statement stmt, String usePrefix) {
-		// System.out.println("handle " + stmt.getKeyword() + "=" + stmt.getValue());
+		// log.debug("handle " + stmt.getKeyword() + "=" + stmt.getValue());
 		if (stmt.getKeyword().equals(YangKeyword.YK_LIST) || stmt.getKeyword().equals(YangKeyword.YK_CONTAINER)
 				|| stmt.getKeyword().equals(YangKeyword.YK_LEAF) || stmt.getKeyword().equals(YangKeyword.YK_LEAF_LIST)
 				|| stmt.getKeyword().equals(YangKeyword.YK_TYPE) || stmt.getKeyword().equals(YangKeyword.YK_ACTION)
 				|| stmt.getKeyword().equals(YangKeyword.YK_INPUT) || stmt.getKeyword().equals(YangKeyword.YK_OUTPUT)
 				|| stmt.getKeyword().equals(YangKeyword.YK_CHOICE) || stmt.getKeyword().equals(YangKeyword.YK_CASE)
 				|| stmt.getKeyword().equals(YangKeyword.YK_USES)) {
-			// System.out.println("handle " + stmt.getKeyword() + "=" + stmt.getValue());
+			// log.debug("handle " + stmt.getKeyword() + "=" + stmt.getValue());
 
 			if (stmt.getKeyword().equals(YangKeyword.YK_USES)) {
 				String ss[] = stmt.getValue().split(":");
@@ -272,8 +286,8 @@ public class NamespaceUtil {
 				PrefixNode pn = prefix2ns.get(prefix);
 				Statement group = YangRepo.findStatementByKVP(YangKeyword.YK_GROUPING, gname, pn.prefix);
 				if (group == null) {
-					System.out.println("cannot find out grouping " + stmt.getValue());
-					System.out.println("prefix=" + prefix + ", name=" + gname + ", file=" + stmt.getFile());
+					log.debug("cannot find out grouping " + stmt.getValue());
+					log.debug("prefix=" + prefix + ", name=" + gname + ", file=" + stmt.getFile());
 					return;
 				}
 				for (Statement sub : group.children) {
@@ -304,7 +318,7 @@ public class NamespaceUtil {
 			String prefix = "";
 			if (!child.prefix.equals(child.parent.prefix))
 				prefix = child.prefix + ":";
-			System.out.println(child.current.getKeyword() + "=" + prefix + child.current.getValue());
+			log.debug(child.current.getKeyword() + "=" + prefix + child.current.getValue());
 			printTree(child, level + 1);
 		}
 	}
@@ -319,7 +333,7 @@ public class NamespaceUtil {
 	}
 
 	private static void addNsToElement(Element ele, ExtendedNode n) {
-		// System.out.println(ele.getTagName());
+		// log.debug(ele.getTagName());
 		NodeList ls = ele.getChildNodes();
 		ExtendedNode next = null;
 		for (ExtendedNode node : n.children) {
@@ -334,7 +348,7 @@ public class NamespaceUtil {
 					if (!value.equals("")) {
 						Statement id = YangRepo.findStatementByKV(YangKeyword.YK_IDENTITY, value);
 						if (id == null) {
-							System.out.println("fail to find ns for " + value);
+							log.debug("fail to find ns for " + value);
 						}
 						if (!id.getPrefix().equals(node.prefix)) {
 							PrefixNode pre = prefix2ns.get(id.getPrefix());
@@ -349,7 +363,7 @@ public class NamespaceUtil {
 			}
 		}
 		if (next == null) {
-			System.out.println("Fail to find ns for " + ele.getTagName());
+			log.debug("Fail to find ns for " + ele.getTagName());
 			return;
 		}
 		for (int i = 0; i < ls.getLength(); i++) {
@@ -413,7 +427,7 @@ public class NamespaceUtil {
 		}
 
 		if (yangFile == null || xmlFile == null) {
-			System.out.println("Usage: -y [yang file folder] -x [xml file path] [-o <output file path>]");
+			log.debug("Usage: -y [yang file folder] -x [xml file path] [-o <output file path>]");
 			System.exit(1);
 		}
 
@@ -422,12 +436,12 @@ public class NamespaceUtil {
 		String input = FileUtil.readFile(xmlFile);
 
 		try {
-			System.out.println(input);
+			log.debug(input);
 			String output = NamespaceUtil.getXmlTextWithNs(input);
 			if (outFile != null)
 				FileUtil.writeFile(outFile, output);
 			else
-				System.out.println(output);
+				log.debug(output);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
