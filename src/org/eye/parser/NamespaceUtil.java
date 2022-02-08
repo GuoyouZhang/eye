@@ -52,7 +52,7 @@ public class NamespaceUtil {
 	static LogInterface log = new LogInterface() {
 		@Override
 		public void debug(String info) {
-			log.debug(info);
+			System.out.println(info);
 		}
 	};
 	
